@@ -1,0 +1,24 @@
+.title-bar {
+  height: 30px;
+  background: #2c3e50;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+  -webkit-app-region: drag;
+  color: white;
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+  -webkit-app-region: no-drag;
+}
+
+.controls button {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+}
