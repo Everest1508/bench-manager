@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Remote Frappe Bench Manager</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { display: flex; flex-direction: column; gap: 15px; }
+        .connection-form { background: #f5f5f5; padding: 15px; border-radius: 5px; }
+        .command-section { background: #f0f8ff; padding: 15px; border-radius: 5px; }
+        .output { background: #333; color: #fff; padding: 10px; border-radius: 5px; min-height: 200px; }
+        input, button { padding: 8px; margin: 5px 0; }
+        button { cursor: pointer; }
+        .connected { color: green; }
+        .disconnected { color: red; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Remote Frappe Bench Manager</h1>
+        
+        <div class="connection-form">
+            <h2>SSH Connection</h2>
+            <div>
+                <label>Server IP:</label>
+                <input type="text" id="serverIp" placeholder="192.168.1.100">
+            </div>
+            <div>
+                <label>Username:</label>
+                <input type="text" id="username" placeholder="ubuntu">
+            </div>
+            <div>
+                <label>Password:</label>
+                <input type="password" id="password">
+            </div>
+            <div>
+                <label>Bench Path (optional):</label>
+                <input type="text" id="benchPath" placeholder="/home/user/frappe-bench">
+            </div>
+            <button id="connectBtn">Connect</button>
+            <button id="disconnectBtn" disabled>Disconnect</button>
+            <span id="connectionStatus" class="disconnected">Disconnected</span>
+        </div>
+        
+        <div class="command-section">
+            <h2>Bench Commands</h2>
+            <div>
+                <button id="backupBtn" disabled>Create Backup</button>
+                <button id="migrateBtn" disabled>Migrate</button>
+                <button id="installBtn" disabled>Install App</button>
+                <button id="updateBtn" disabled>Update All</button>
+            </div>
+            <div>
+                <label>Custom Command:</label>
+                <input type="text" id="customCommand" placeholder="install-app erpnext">
+                <button id="runCustomBtn" disabled>Run</button>
+            </div>
+        </div>
+        
+        <div class="output" id="output">
+            <pre>Waiting for connection...</pre>
+        </div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron')
+        const outputEl = document.getElementById('output')
+        
+        // Connection handling
+        document.getElementById('connectBtn').addEventListener('click', () => {
+            const host = document.getElementById('serverIp').value
+            const username = document.getElementById('username').value
+            const password = document.getElementById('password').value
+            const benchPath = document.getElementById('benchPath').value
+            
+            ipcRenderer.send('ssh-connect', { 
+                host, 
+                username, 
+                password, 
+                benchPath: benchPath || null 
+            })
+        })
+        
+        document.getElementById('disconnectBtn').addEventListener('click', () => {
+            ipcRenderer.send('ssh-disconnect')
+        })
+        
+        // Command buttons
+        const commandButtons = ['backup', 'migrate', 'install', 'update', 'runCustom']
+            .forEach(cmd => {
+                const btn = document.getElementById(`${cmd}Btn`)
+                if (btn) btn.addEventListener('click', () => {
+                    let command
+                    if (cmd === 'runCustom') {
+                        command = document.getElementById('customCommand').value
+                    } else {
+                        command = {
+                            'backup': 'backup',
+                            'migrate': 'migrate',
+                            'install': 'install-app',
+                            'update': 'update'
+                        }[cmd]
+                    }
+                    
+                    if (command) {
+                        ipcRenderer.send('execute-bench-command', { command })
+                    }
+                })
+            })
+        
+        // IPC Listeners
+        ipcRenderer.on('ssh-status', (event, data) => {
+            const statusEl = document.getElementById('connectionStatus')
+            if (data.connected) {
+                statusEl.textContent = 'Connected'
+                statusEl.className = 'connected'
+                document.getElementById('connectBtn').disabled = true
+                document.getElementById('disconnectBtn').disabled = false
+                commandButtons.forEach(cmd => {
+                    const btn = document.getElementById(`${cmd}Btn`)
+                    if (btn) btn.disabled = false
+                })
+            }
+            appendOutput(data.message)
+        })
+        
+        ipcRenderer.on('bench-found', (event, data) => {
+            appendOutput(`Found bench at: ${data.path}`)
+        })
+        
+        ipcRenderer.on('command-output', (event, data) => {
+            appendOutput(data.output)
+        })
+        
+        ipcRenderer.on('command-complete', (event, data) => {
+            appendOutput(`Command completed with code: ${data.code}`)
+        })
+        
+        ipcRenderer.on('ssh-error', (event, data) => {
+            appendOutput(`Error: ${data.error}`, true)
+        })
+        
+        ipcRenderer.on('command-error', (event, data) => {
+            appendOutput(`Command error: ${data.error}`, true)
+        })
+        
+        function appendOutput(text, isError = false) {
+            const pre = document.createElement('pre')
+            pre.style.color = isError ? 'red' : 'white'
+            pre.textContent = text
+            outputEl.appendChild(pre)
+            outputEl.scrollTop = outputEl.scrollHeight
+        }
+    </script>
+</body>
+</html>

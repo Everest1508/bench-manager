@@ -1,0 +1,44 @@
+appId: com.beforth.app
+productName: Frappe Bench Manager
+version: 1.0.0
+description: A desktop application to manage Frappe Bench instances.
+author: Ritesh Mahale
+copyright: Copyright © 2025 ${author}
+directories:
+  output: dist
+  buildResources: resources
+files:
+  - "build/**/*"
+  - "!**/node_modules/*"
+  - "!**/*.map"
+
+win:
+  target: 
+    - target: nsis
+      arch: 
+        - x64
+  icon: resources/icons/win/icon.ico
+  artifactName: "${productName}-${version}-${arch}.${ext}"
+  requestedExecutionLevel: highestAvailable
+  compression: maximum
+  nsis:
+    oneClick: false
+    perMachine: false
+    allowElevation: true
+    allowToChangeInstallationDirectory: true
+    createDesktopShortcut: true
+    createStartMenuShortcut: true
+    shortcutName: "${productName}"
+    deleteAppDataOnUninstall: false
+    license: "resources/license.txt"
+    menuCategory: true
+
+# Linux configuration
+linux:
+  target: AppImage
+  icon: resources/icons/png/icon.png
+  category: Utility
+  synopsis: "Manage Frappe Bench instances"
+  description: |
+    A comprehensive desktop application for managing multiple Frappe Bench
+    installations with an intuitive graphical interface.
